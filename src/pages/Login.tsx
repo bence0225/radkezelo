@@ -24,8 +24,10 @@ export default function Login() {
         <h1>Raktárkezelő</h1>
         {!supabaseConfigured && (
           <Notice kind="warn">
-            A Supabase nincs beállítva — töltsd ki a <b>VITE_SUPABASE_URL</b> és{' '}
-            <b>VITE_SUPABASE_ANON_KEY</b> értékét a <b>.env.local</b> fájlban, majd indítsd újra a dev szervert.
+            A Supabase nincs beállítva a telepített alkalmazáshoz. Add meg a{' '}
+            <b>VITE_SUPABASE_URL</b> és <b>VITE_SUPABASE_ANON_KEY</b> változókat a Cloudflare Pages projekt{' '}
+            <b>Settings → Environment variables</b> beállításainál a Production környezethez, majd indíts új
+            deploymentet.
           </Notice>
         )}
         <Field label="E-mail">

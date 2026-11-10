@@ -8,6 +8,17 @@ React + Vite + TypeScript, Supabase háttérrel (spec v0.7).
    (minta: `.env.example`).
 2. `npm install` · `npm run dev`
 
+## Cloudflare Pages telepítés
+
+A Vite a `VITE_` változókat buildidőben építi be a frontendbe. A Cloudflare Pages projektben a
+**Settings → Environment variables** részen add meg a `VITE_SUPABASE_URL` és
+`VITE_SUPABASE_ANON_KEY` értékeket a **Production** környezethez. Ezután indíts új deploymentet;
+a már elkészült build nem veszi át utólag a változtatásokat. Preview deploymenthez a Preview
+környezetben is be kell állítani őket.
+
+Kizárólag a Supabase anon/publishable kulcsát használd frontend változóként; service-role kulcsot
+ne tegyél ide.
+
 ## Felépítés
 
 - `src/lib/supabase.ts` — kliens; `src/lib/tables.ts` — táblanevek egy helyen; `src/lib/types.ts` — a 7 tábla típusai

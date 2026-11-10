@@ -1,0 +1,11 @@
+{
+  // Cloudflare Workers – statikus Vite build kiszolgálása (nincs szerveroldali kód).
+  // A "name" egyezzen meg a Cloudflare-en lévő Worker nevével.
+  "name": "radkezelo",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    // Ismeretlen útvonalon is az index.html töltődjön be (React SPA).
+    "not_found_handling": "single-page-application"
+  }
+}
