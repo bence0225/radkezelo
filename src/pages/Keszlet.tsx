@@ -48,7 +48,7 @@ export default function Keszlet() {
           <tbody>
             {rows.map((r) => (
               <tr key={`${r.product_id}-${r.location_id}-${r.lot}-${r.lejarat}`} className={isLow(r) ? 'low' : undefined}>
-                <td className="stack-title" data-label="Termék">{r.products?.nev}</td>
+                <td className="stack-title wrap" data-label="Termék">{r.products?.nev}</td>
                 <td data-label="Lerakat">{r.locations?.nev}</td>
                 <td data-label="LOT">{r.lot ?? '—'}</td>
                 <td data-label="Lejárat">{r.lejarat ?? '—'}</td>

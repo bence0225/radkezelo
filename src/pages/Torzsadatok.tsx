@@ -428,11 +428,11 @@ function ProductsAdmin() {
       <Loading loading={list.loading} error={list.error} />
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Név</th><th>Cikkszám</th><th>Mértékegység</th><th>Kategória</th><th className="num">Minimum</th><th>Aktív</th><th></th></tr></thead>
+          <thead><tr><th>Név</th><th>Cikkszám</th><th>Egység</th><th>Kategória</th><th className="num">Minimum</th><th>Aktív</th><th></th></tr></thead>
           <tbody>
             {list.data?.map((p) => (
               <tr key={p.id}>
-                <td>{p.nev}</td>
+                <td className="wrap">{p.nev}</td>
                 <td>{p.cikkszam ?? '—'}</td>
                 <td>{p.mertekegyseg}</td>
                 <td>{p.kategoriak?.nev ?? '—'}</td>
