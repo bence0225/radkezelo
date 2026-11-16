@@ -40,19 +40,19 @@ export default function Keszlet() {
         </select>
       </Field>
       <Loading loading={stock.loading} error={stock.error} />
-      <div className="table-wrap">
-        <table>
+      <div className="table-wrap table-wrap--stack">
+        <table className="table-stack">
           <thead>
             <tr><th>Termék</th><th>Lerakat</th><th>LOT</th><th>Lejárat</th><th className="num">Mennyiség</th></tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={`${r.product_id}-${r.location_id}-${r.lot}-${r.lejarat}`} className={isLow(r) ? 'low' : undefined}>
-                <td>{r.products?.nev}</td>
-                <td>{r.locations?.nev}</td>
-                <td>{r.lot ?? '—'}</td>
-                <td>{r.lejarat ?? '—'}</td>
-                <td className="num">{r.mennyiseg} {r.products?.mertekegyseg}</td>
+                <td className="stack-title" data-label="Termék">{r.products?.nev}</td>
+                <td data-label="Lerakat">{r.locations?.nev}</td>
+                <td data-label="LOT">{r.lot ?? '—'}</td>
+                <td data-label="Lejárat">{r.lejarat ?? '—'}</td>
+                <td className="num" data-label="Mennyiség">{r.mennyiseg} {r.products?.mertekegyseg}</td>
               </tr>
             ))}
             {!stock.loading && !rows.length && <tr><td colSpan={5} className="muted">Nincs készletsor.</td></tr>}

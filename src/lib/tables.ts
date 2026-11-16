@@ -8,4 +8,5 @@ export const T = {
   usagePlaces: 'felhasznalasi_helyek',
   stock: 'stock',
   movements: 'stock_movements',
+  notifications: 'ertesitesek',
 } as const

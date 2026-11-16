@@ -74,3 +74,19 @@ export interface Movement {
 }
 
 export type NewMovement = Omit<Movement, 'id' | 'products' | 'locations' | 'felhasznalasi_helyek'>
+
+export type NotificationType = 'ALACSONY' | 'ELFOGYOTT' | 'NEGATIV'
+
+/** Készlet-értesítés (alacsony / elfogyott / negatív) — a DB-trigger hozza létre. */
+export interface Ertesites {
+  id: number
+  user_id: string
+  tipus: NotificationType
+  product_id: number
+  location_id: number
+  mennyiseg: number
+  min_mennyiseg: number | null
+  uzenet: string
+  letrehozva: string
+  olvasva: string | null
+}

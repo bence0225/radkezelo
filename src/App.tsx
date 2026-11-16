@@ -8,16 +8,19 @@ import Naplo from './pages/Naplo'
 import Torzsadatok from './pages/Torzsadatok'
 import Riportok from './pages/Riportok'
 import { Notice } from './components/ui'
+import { NotificationBell } from './components/NotificationBell'
 import { IconStock, IconIn, IconOut, IconLog, IconReport, IconMaster, IconLogout, IconHospital, type IconProps } from './components/icons'
 
 // Hat képernyő (spec 5. fejezet). Külön router nem kell hozzá.
-const SCREENS: { key: string; label: string; Page: ComponentType; Icon: ComponentType<IconProps>; adminOnly?: boolean }[] = [
-  { key: 'keszlet', label: 'Készlet', Page: Keszlet, Icon: IconStock },
-  { key: 'bevet', label: 'Bevételezés', Page: Bevetelezes, Icon: IconIn },
-  { key: 'kivet', label: 'Kivét', Page: Kivet, Icon: IconOut },
-  { key: 'naplo', label: 'Napló', Page: Naplo, Icon: IconLog },
-  { key: 'riport', label: 'Riportok és leltár', Page: Riportok, Icon: IconReport },
-  { key: 'torzs', label: 'Törzsadatok', Page: Torzsadatok, Icon: IconMaster, adminOnly: true },
+// A "wide" képernyők a teljes ablakszélességet használják (sokoszlopos táblázat).
+// A "short" felirat a mobilos alsó menüsorba kerül, ahol kevés a hely.
+const SCREENS: { key: string; label: string; short: string; Page: ComponentType; Icon: ComponentType<IconProps>; adminOnly?: boolean; wide?: boolean }[] = [
+  { key: 'keszlet', label: 'Készlet', short: 'Készlet', Page: Keszlet, Icon: IconStock },
+  { key: 'bevet', label: 'Bevételezés', short: 'Bevét', Page: Bevetelezes, Icon: IconIn },
+  { key: 'kivet', label: 'Kivét', short: 'Kivét', Page: Kivet, Icon: IconOut },
+  { key: 'naplo', label: 'Napló', short: 'Napló', Page: Naplo, Icon: IconLog, wide: true },
+  { key: 'riport', label: 'Riportok és leltár', short: 'Riport', Page: Riportok, Icon: IconReport },
+  { key: 'torzs', label: 'Törzsadatok', short: 'Törzs', Page: Torzsadatok, Icon: IconMaster, adminOnly: true },
 ]
 
 function Shell() {
@@ -64,7 +67,8 @@ function Shell() {
               aria-current={s.key === active.key ? 'page' : undefined}
             >
               <s.Icon className="nav__icon" aria-hidden="true" />
-              <span>{s.label}</span>
+              <span className="nav__label">{s.label}</span>
+              <span className="nav__short">{s.short}</span>
             </button>
           ))}
         </nav>
@@ -74,12 +78,17 @@ function Shell() {
             <span className="account__name">{profile.nev}</span>
             <span className="account__role">{profile.szerepkor === 'ADMIN' ? 'Admin' : 'Felhasználó'}</span>
           </span>
+          <NotificationBell
+            userId={profile.id}
+            loginKey={session.user.last_sign_in_at ?? ''}
+            onOpenItem={() => setScreen('keszlet')}
+          />
           <button className="account__logout" onClick={signOut} title="Kilépés" aria-label="Kilépés">
             <IconLogout />
           </button>
         </div>
       </header>
-      <main className="page"><Page /></main>
+      <main className={`page${active.wide ? ' page--wide' : ''}`}><Page /></main>
     </>
   )
 }

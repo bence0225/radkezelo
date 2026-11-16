@@ -4,7 +4,7 @@ import { T } from '../lib/tables'
 import { useQuery } from '../lib/useQuery'
 import { useAuth } from '../auth/AuthProvider'
 import type { Category, Location, Product, Profile, UsagePlace } from '../lib/types'
-import { Field, Loading, Notice } from '../components/ui'
+import { Field, Loading, Modal, Notice, Toggle } from '../components/ui'
 
 // Admin-only CRUD a törzsadatokhoz (spec 4.5). A hozzáférés két szinten védett:
 // (1) az App.tsx navigációja eleve csak Adminnak mutatja ezt a képernyőt,
@@ -68,11 +68,13 @@ function LocationsAdmin() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [nev, setNev] = useState('')
   const [aktiv, setAktiv] = useState(true)
-  const [status, setStatus] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
+  const [open, setOpen] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [status, setStatus] = useState<Status | null>(null)
   const [busy, setBusy] = useState(false)
 
-  function startNew() { setEditingId(null); setNev(''); setAktiv(true); setStatus(null) }
-  function startEdit(l: Location) { setEditingId(l.id); setNev(l.nev); setAktiv(l.aktiv); setStatus(null) }
+  function startNew() { setEditingId(null); setNev(''); setAktiv(true); setFormError(null); setStatus(null); setOpen(true) }
+  function startEdit(l: Location) { setEditingId(l.id); setNev(l.nev); setAktiv(l.aktiv); setFormError(null); setStatus(null); setOpen(true) }
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -82,12 +84,12 @@ function LocationsAdmin() {
     const { error } = editingId
       ? await supabase.from(T.locations).update(row).eq('id', editingId)
       : await supabase.from(T.locations).insert(row)
-    if (error) setStatus({ kind: 'error', text: error.message })
+    if (error) setFormError(error.message)
     else {
+      setOpen(false)
       setStatus({ kind: 'ok', text: 'Mentve.' })
       list.reload()
       reloadLocations() // hogy a Bevételezés/Kivét/stb. azonnal lássa az új/módosított lerakatot
-      if (!editingId) startNew()
     }
     setBusy(false)
   }
@@ -96,27 +98,31 @@ function LocationsAdmin() {
     if (!window.confirm(`Biztosan törlöd a(z) „${l.nev}” lerakatot?`)) return
     setBusy(true)
     const result = await deleteRow(T.locations, l.id, 'a lerakathoz már tartozik készlet vagy mozgás')
-    if (result.kind === 'ok') { list.reload(); reloadLocations(); if (editingId === l.id) startNew() }
+    if (result.kind === 'ok') { list.reload(); reloadLocations() }
     setStatus(result)
     setBusy(false)
   }
 
   return (
     <div>
-      <form className="card form" onSubmit={submit}>
-        <h3 style={{ marginTop: 0 }}>{editingId ? 'Lerakat szerkesztése' : 'Új lerakat'}</h3>
-        <Field label="Név">
-          <input value={nev} onChange={(e) => setNev(e.target.value)} required />
-        </Field>
-        <Field label="Aktív">
-          <input type="checkbox" checked={aktiv} onChange={(e) => setAktiv(e.target.checked)} style={{ width: 'auto' }} />
-        </Field>
+      <Modal open={open} title={editingId ? 'Lerakat szerkesztése' : 'Új lerakat'} onClose={() => setOpen(false)}>
+        <form className="form" onSubmit={submit}>
+          <Field label="Név">
+            <input value={nev} onChange={(e) => setNev(e.target.value)} required />
+          </Field>
+          <Toggle label="Aktív" checked={aktiv} onChange={setAktiv} />
+          {formError && <Notice kind="error">{formError}</Notice>}
+          <div className="modal__actions">
+            <button type="button" className="link" onClick={() => setOpen(false)}>Mégse</button>
+            <button disabled={busy}>{editingId ? 'Mentés' : 'Felvétel'}</button>
+          </div>
+        </form>
+      </Modal>
+
+      <div className="toolbar">
         {status && <Notice kind={status.kind}>{status.text}</Notice>}
-        <div style={{ display: 'flex', gap: '.5rem' }}>
-          <button disabled={busy}>{editingId ? 'Mentés' : 'Felvétel'}</button>
-          {editingId != null && <button type="button" className="link" onClick={startNew}>Mégse</button>}
-        </div>
-      </form>
+        <button type="button" onClick={startNew}>+ Új lerakat</button>
+      </div>
 
       <Loading loading={list.loading} error={list.error} />
       <div className="table-wrap">
@@ -152,11 +158,13 @@ function UsagePlacesAdmin() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [nev, setNev] = useState('')
   const [aktiv, setAktiv] = useState(true)
+  const [open, setOpen] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const [status, setStatus] = useState<Status | null>(null)
   const [busy, setBusy] = useState(false)
 
-  function startNew() { setEditingId(null); setNev(''); setAktiv(true); setStatus(null) }
-  function startEdit(h: UsagePlace) { setEditingId(h.id); setNev(h.nev); setAktiv(h.aktiv); setStatus(null) }
+  function startNew() { setEditingId(null); setNev(''); setAktiv(true); setFormError(null); setStatus(null); setOpen(true) }
+  function startEdit(h: UsagePlace) { setEditingId(h.id); setNev(h.nev); setAktiv(h.aktiv); setFormError(null); setStatus(null); setOpen(true) }
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -166,8 +174,8 @@ function UsagePlacesAdmin() {
     const { error } = editingId
       ? await supabase.from(T.usagePlaces).update(row).eq('id', editingId)
       : await supabase.from(T.usagePlaces).insert(row)
-    if (error) setStatus({ kind: 'error', text: error.message })
-    else { setStatus({ kind: 'ok', text: 'Mentve.' }); list.reload(); if (!editingId) startNew() }
+    if (error) setFormError(error.message)
+    else { setOpen(false); setStatus({ kind: 'ok', text: 'Mentve.' }); list.reload() }
     setBusy(false)
   }
 
@@ -175,27 +183,31 @@ function UsagePlacesAdmin() {
     if (!window.confirm(`Biztosan törlöd a(z) „${h.nev}” felhasználási helyet?`)) return
     setBusy(true)
     const result = await deleteRow(T.usagePlaces, h.id, 'erre a helyre már történt kivét')
-    if (result.kind === 'ok') { list.reload(); if (editingId === h.id) startNew() }
+    if (result.kind === 'ok') list.reload()
     setStatus(result)
     setBusy(false)
   }
 
   return (
     <div>
-      <form className="card form" onSubmit={submit}>
-        <h3 style={{ marginTop: 0 }}>{editingId ? 'Felhasználási hely szerkesztése' : 'Új felhasználási hely'}</h3>
-        <Field label="Név (pl. CT, MR, átvilágító)">
-          <input value={nev} onChange={(e) => setNev(e.target.value)} required />
-        </Field>
-        <Field label="Aktív">
-          <input type="checkbox" checked={aktiv} onChange={(e) => setAktiv(e.target.checked)} style={{ width: 'auto' }} />
-        </Field>
+      <Modal open={open} title={editingId ? 'Felhasználási hely szerkesztése' : 'Új felhasználási hely'} onClose={() => setOpen(false)}>
+        <form className="form" onSubmit={submit}>
+          <Field label="Név (pl. CT, MR, átvilágító)">
+            <input value={nev} onChange={(e) => setNev(e.target.value)} required />
+          </Field>
+          <Toggle label="Aktív" checked={aktiv} onChange={setAktiv} />
+          {formError && <Notice kind="error">{formError}</Notice>}
+          <div className="modal__actions">
+            <button type="button" className="link" onClick={() => setOpen(false)}>Mégse</button>
+            <button disabled={busy}>{editingId ? 'Mentés' : 'Felvétel'}</button>
+          </div>
+        </form>
+      </Modal>
+
+      <div className="toolbar">
         {status && <Notice kind={status.kind}>{status.text}</Notice>}
-        <div style={{ display: 'flex', gap: '.5rem' }}>
-          <button disabled={busy}>{editingId ? 'Mentés' : 'Felvétel'}</button>
-          {editingId != null && <button type="button" className="link" onClick={startNew}>Mégse</button>}
-        </div>
-      </form>
+        <button type="button" onClick={startNew}>+ Új felhasználási hely</button>
+      </div>
 
       <Loading loading={list.loading} error={list.error} />
       <div className="table-wrap">
@@ -233,11 +245,19 @@ function CategoriesAdmin() {
   const [lotKotelezo, setLotKotelezo] = useState(false)
   const [lejaratKotelezo, setLejaratKotelezo] = useState(false)
   const [aktiv, setAktiv] = useState(true)
-  const [status, setStatus] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
+  const [open, setOpen] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [status, setStatus] = useState<Status | null>(null)
   const [busy, setBusy] = useState(false)
 
-  function startNew() { setEditingId(null); setNev(''); setLotKotelezo(false); setLejaratKotelezo(false); setAktiv(true); setStatus(null) }
-  function startEdit(c: Category) { setEditingId(c.id); setNev(c.nev); setLotKotelezo(c.lot_kotelezo); setLejaratKotelezo(c.lejarat_kotelezo); setAktiv(c.aktiv); setStatus(null) }
+  function startNew() {
+    setEditingId(null); setNev(''); setLotKotelezo(false); setLejaratKotelezo(false); setAktiv(true)
+    setFormError(null); setStatus(null); setOpen(true)
+  }
+  function startEdit(c: Category) {
+    setEditingId(c.id); setNev(c.nev); setLotKotelezo(c.lot_kotelezo); setLejaratKotelezo(c.lejarat_kotelezo); setAktiv(c.aktiv)
+    setFormError(null); setStatus(null); setOpen(true)
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -247,8 +267,8 @@ function CategoriesAdmin() {
     const { error } = editingId
       ? await supabase.from(T.categories).update(row).eq('id', editingId)
       : await supabase.from(T.categories).insert(row)
-    if (error) setStatus({ kind: 'error', text: error.message })
-    else { setStatus({ kind: 'ok', text: 'Mentve.' }); list.reload(); if (!editingId) startNew() }
+    if (error) setFormError(error.message)
+    else { setOpen(false); setStatus({ kind: 'ok', text: 'Mentve.' }); list.reload() }
     setBusy(false)
   }
 
@@ -256,33 +276,33 @@ function CategoriesAdmin() {
     if (!window.confirm(`Biztosan törlöd a(z) „${c.nev}” kategóriát?`)) return
     setBusy(true)
     const result = await deleteRow(T.categories, c.id, 'a kategóriához még tartozik termék')
-    if (result.kind === 'ok') { list.reload(); if (editingId === c.id) startNew() }
+    if (result.kind === 'ok') list.reload()
     setStatus(result)
     setBusy(false)
   }
 
   return (
     <div>
-      <form className="card form" onSubmit={submit}>
-        <h3 style={{ marginTop: 0 }}>{editingId ? 'Kategória szerkesztése' : 'Új kategória'}</h3>
-        <Field label="Név">
-          <input value={nev} onChange={(e) => setNev(e.target.value)} required />
-        </Field>
-        <Field label="LOT kötelező">
-          <input type="checkbox" checked={lotKotelezo} onChange={(e) => setLotKotelezo(e.target.checked)} style={{ width: 'auto' }} />
-        </Field>
-        <Field label="Lejárat kötelező">
-          <input type="checkbox" checked={lejaratKotelezo} onChange={(e) => setLejaratKotelezo(e.target.checked)} style={{ width: 'auto' }} />
-        </Field>
-        <Field label="Aktív">
-          <input type="checkbox" checked={aktiv} onChange={(e) => setAktiv(e.target.checked)} style={{ width: 'auto' }} />
-        </Field>
+      <Modal open={open} title={editingId ? 'Kategória szerkesztése' : 'Új kategória'} onClose={() => setOpen(false)}>
+        <form className="form" onSubmit={submit}>
+          <Field label="Név">
+            <input value={nev} onChange={(e) => setNev(e.target.value)} required />
+          </Field>
+          <Toggle label="LOT kötelező" checked={lotKotelezo} onChange={setLotKotelezo} />
+          <Toggle label="Lejárat kötelező" checked={lejaratKotelezo} onChange={setLejaratKotelezo} />
+          <Toggle label="Aktív" checked={aktiv} onChange={setAktiv} />
+          {formError && <Notice kind="error">{formError}</Notice>}
+          <div className="modal__actions">
+            <button type="button" className="link" onClick={() => setOpen(false)}>Mégse</button>
+            <button disabled={busy}>{editingId ? 'Mentés' : 'Felvétel'}</button>
+          </div>
+        </form>
+      </Modal>
+
+      <div className="toolbar">
         {status && <Notice kind={status.kind}>{status.text}</Notice>}
-        <div style={{ display: 'flex', gap: '.5rem' }}>
-          <button disabled={busy}>{editingId ? 'Mentés' : 'Felvétel'}</button>
-          {editingId != null && <button type="button" className="link" onClick={startNew}>Mégse</button>}
-        </div>
-      </form>
+        <button type="button" onClick={startNew}>+ Új kategória</button>
+      </div>
 
       <Loading loading={list.loading} error={list.error} />
       <div className="table-wrap">
@@ -325,15 +345,19 @@ function ProductsAdmin() {
   const [kategoriaId, setKategoriaId] = useState('')
   const [minMennyiseg, setMinMennyiseg] = useState('')
   const [aktiv, setAktiv] = useState(true)
-  const [status, setStatus] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
+  const [open, setOpen] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [status, setStatus] = useState<Status | null>(null)
   const [busy, setBusy] = useState(false)
 
   function startNew() {
-    setEditingId(null); setNev(''); setCikkszam(''); setMertekegyseg(''); setKategoriaId(''); setMinMennyiseg(''); setAktiv(true); setStatus(null)
+    setEditingId(null); setNev(''); setCikkszam(''); setMertekegyseg(''); setKategoriaId(''); setMinMennyiseg(''); setAktiv(true)
+    setFormError(null); setStatus(null); setOpen(true)
   }
   function startEdit(p: Product) {
     setEditingId(p.id); setNev(p.nev); setCikkszam(p.cikkszam ?? ''); setMertekegyseg(p.mertekegyseg)
-    setKategoriaId(String(p.kategoria_id)); setMinMennyiseg(p.min_mennyiseg != null ? String(p.min_mennyiseg) : ''); setAktiv(p.aktiv); setStatus(null)
+    setKategoriaId(String(p.kategoria_id)); setMinMennyiseg(p.min_mennyiseg != null ? String(p.min_mennyiseg) : ''); setAktiv(p.aktiv)
+    setFormError(null); setStatus(null); setOpen(true)
   }
 
   async function submit(e: FormEvent) {
@@ -351,8 +375,8 @@ function ProductsAdmin() {
     const { error } = editingId
       ? await supabase.from(T.products).update(row).eq('id', editingId)
       : await supabase.from(T.products).insert(row)
-    if (error) setStatus({ kind: 'error', text: error.message })
-    else { setStatus({ kind: 'ok', text: 'Mentve.' }); list.reload(); if (!editingId) startNew() }
+    if (error) setFormError(error.message)
+    else { setOpen(false); setStatus({ kind: 'ok', text: 'Mentve.' }); list.reload() }
     setBusy(false)
   }
 
@@ -360,42 +384,46 @@ function ProductsAdmin() {
     if (!window.confirm(`Biztosan törlöd a(z) „${p.nev}” terméket?`)) return
     setBusy(true)
     const result = await deleteRow(T.products, p.id, 'a termékhez már tartozik készlet vagy mozgás')
-    if (result.kind === 'ok') { list.reload(); if (editingId === p.id) startNew() }
+    if (result.kind === 'ok') list.reload()
     setStatus(result)
     setBusy(false)
   }
 
   return (
     <div>
-      <form className="card form" onSubmit={submit}>
-        <h3 style={{ marginTop: 0 }}>{editingId ? 'Termék szerkesztése' : 'Új termék'}</h3>
-        <Field label="Név">
-          <input value={nev} onChange={(e) => setNev(e.target.value)} required />
-        </Field>
-        <Field label="Cikkszám (EOS, opcionális)">
-          <input value={cikkszam} onChange={(e) => setCikkszam(e.target.value)} />
-        </Field>
-        <Field label="Mértékegység (pl. db, ml)">
-          <input value={mertekegyseg} onChange={(e) => setMertekegyseg(e.target.value)} required />
-        </Field>
-        <Field label="Kategória">
-          <select value={kategoriaId} onChange={(e) => setKategoriaId(e.target.value)} required>
-            <option value="">— válassz —</option>
-            {categories.data?.map((c) => <option key={c.id} value={c.id}>{c.nev}</option>)}
-          </select>
-        </Field>
-        <Field label="Minimum mennyiség (opcionális)">
-          <input type="number" min="0" step="any" value={minMennyiseg} onChange={(e) => setMinMennyiseg(e.target.value)} />
-        </Field>
-        <Field label="Aktív">
-          <input type="checkbox" checked={aktiv} onChange={(e) => setAktiv(e.target.checked)} style={{ width: 'auto' }} />
-        </Field>
+      <Modal open={open} title={editingId ? 'Termék szerkesztése' : 'Új termék'} onClose={() => setOpen(false)}>
+        <form className="form" onSubmit={submit}>
+          <Field label="Név">
+            <input value={nev} onChange={(e) => setNev(e.target.value)} required />
+          </Field>
+          <Field label="Cikkszám (EOS, opcionális)">
+            <input value={cikkszam} onChange={(e) => setCikkszam(e.target.value)} />
+          </Field>
+          <Field label="Mértékegység (pl. db, ml)">
+            <input value={mertekegyseg} onChange={(e) => setMertekegyseg(e.target.value)} required />
+          </Field>
+          <Field label="Kategória">
+            <select value={kategoriaId} onChange={(e) => setKategoriaId(e.target.value)} required>
+              <option value="">— válassz —</option>
+              {categories.data?.map((c) => <option key={c.id} value={c.id}>{c.nev}</option>)}
+            </select>
+          </Field>
+          <Field label="Minimum mennyiség (opcionális)">
+            <input type="number" min="0" step="any" value={minMennyiseg} onChange={(e) => setMinMennyiseg(e.target.value)} />
+          </Field>
+          <Toggle label="Aktív" checked={aktiv} onChange={setAktiv} />
+          {formError && <Notice kind="error">{formError}</Notice>}
+          <div className="modal__actions">
+            <button type="button" className="link" onClick={() => setOpen(false)}>Mégse</button>
+            <button disabled={busy}>{editingId ? 'Mentés' : 'Felvétel'}</button>
+          </div>
+        </form>
+      </Modal>
+
+      <div className="toolbar">
         {status && <Notice kind={status.kind}>{status.text}</Notice>}
-        <div style={{ display: 'flex', gap: '.5rem' }}>
-          <button disabled={busy}>{editingId ? 'Mentés' : 'Felvétel'}</button>
-          {editingId != null && <button type="button" className="link" onClick={startNew}>Mégse</button>}
-        </div>
-      </form>
+        <button type="button" onClick={startNew}>+ Új termék</button>
+      </div>
 
       <Loading loading={list.loading} error={list.error} />
       <div className="table-wrap">
@@ -434,7 +462,7 @@ function ProductsAdmin() {
 
 function UsersAdmin() {
   const { session } = useAuth()
-  const list =useQuery(() => supabase.from(T.users).select('*').order('nev').returns<Profile[]>(), [])
+  const list = useQuery(() => supabase.from(T.users).select('*').order('nev').returns<Profile[]>(), [])
   const locations = useQuery(() => supabase.from(T.locations).select('*').order('nev').returns<Location[]>(), [])
 
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -442,15 +470,18 @@ function UsersAdmin() {
   const [szerepkor, setSzerepkor] = useState<'ADMIN' | 'FELHASZNALO'>('FELHASZNALO')
   const [aktiv, setAktiv] = useState(true)
   const [selectedLocations, setSelectedLocations] = useState<Set<number>>(new Set())
-  const [status, setStatus] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [status, setStatus] = useState<Status | null>(null)
   const [busy, setBusy] = useState(false)
 
   async function startEdit(u: Profile) {
-    setEditingId(u.id); setNev(u.nev); setSzerepkor(u.szerepkor); setAktiv(u.aktiv); setStatus(null)
+    // Előbb betöltjük a hozzárendelt lerakatokat, hogy az ablak ne üres listával nyíljon meg
     const { data } = await supabase.from(T.userLocations).select('location_id').eq('user_id', u.id)
     setSelectedLocations(new Set((data ?? []).map((r) => r.location_id as number)))
+    setNev(u.nev); setSzerepkor(u.szerepkor); setAktiv(u.aktiv); setFormError(null); setStatus(null)
+    setEditingId(u.id)
   }
-  function cancelEdit() { setEditingId(null); setStatus(null) }
+  function cancelEdit() { setEditingId(null) }
 
   function toggleLocation(id: number) {
     setSelectedLocations((prev) => {
@@ -476,8 +507,8 @@ function UsersAdmin() {
     const { error: insError } = rows.length ? await supabase.from(T.userLocations).insert(rows) : { error: null }
 
     const error = profileError || delError || insError
-    if (error) setStatus({ kind: 'error', text: error.message })
-    else { setStatus({ kind: 'ok', text: 'Mentve.' }); list.reload() }
+    if (error) setFormError(error.message)
+    else { setEditingId(null); setStatus({ kind: 'ok', text: 'Mentve.' }); list.reload() }
     setBusy(false)
   }
 
@@ -489,7 +520,7 @@ function UsersAdmin() {
     setBusy(true)
     const { error } = await supabase.rpc('admin_delete_user', { uid: u.id })
     const result = deleteStatus(error, 'a felhasználó már rögzített mozgást a naplóba')
-    if (result.kind === 'ok') { list.reload(); if (editingId === u.id) setEditingId(null) }
+    if (result.kind === 'ok') list.reload()
     setStatus(result)
     setBusy(false)
   }
@@ -501,9 +532,8 @@ function UsersAdmin() {
         állítható be a szerepköre és a lerakat-hozzárendelése.
       </Notice>
 
-      {editingId && (
-        <form className="card form" onSubmit={submit}>
-          <h3 style={{ marginTop: 0 }}>Felhasználó szerkesztése</h3>
+      <Modal open={editingId != null} title="Felhasználó szerkesztése" onClose={cancelEdit}>
+        <form className="form" onSubmit={submit}>
           <Field label="Név">
             <input value={nev} onChange={(e) => setNev(e.target.value)} required />
           </Field>
@@ -513,9 +543,7 @@ function UsersAdmin() {
               <option value="ADMIN">Admin</option>
             </select>
           </Field>
-          <Field label="Aktív">
-            <input type="checkbox" checked={aktiv} onChange={(e) => setAktiv(e.target.checked)} style={{ width: 'auto' }} />
-          </Field>
+          <Toggle label="Aktív" checked={aktiv} onChange={setAktiv} />
           <Field label="Hozzárendelt lerakatok">
             <div className="checkbox-grid">
               {locations.data?.map((l) => (
@@ -526,15 +554,15 @@ function UsersAdmin() {
               ))}
             </div>
           </Field>
-          {status && <Notice kind={status.kind}>{status.text}</Notice>}
-          <div style={{ display: 'flex', gap: '.5rem' }}>
-            <button disabled={busy}>Mentés</button>
+          {formError && <Notice kind="error">{formError}</Notice>}
+          <div className="modal__actions">
             <button type="button" className="link" onClick={cancelEdit}>Mégse</button>
+            <button disabled={busy}>Mentés</button>
           </div>
         </form>
-      )}
+      </Modal>
 
-      {!editingId && status && <Notice kind={status.kind}>{status.text}</Notice>}
+      {status && <div className="toolbar"><Notice kind={status.kind}>{status.text}</Notice></div>}
       <Loading loading={list.loading} error={list.error} />
       <div className="table-wrap">
         <table>

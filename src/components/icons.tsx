@@ -106,3 +106,12 @@ export function IconMenu(props: IconProps) {
     </svg>
   )
 }
+
+export function IconBell(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5.2 13.8V9a4.8 4.8 0 0 1 9.6 0v4.8l1.2 1.4H4l1.2-1.4Z" />
+      <path d="M8.3 17a1.8 1.8 0 0 0 3.4 0" />
+    </svg>
+  )
+}

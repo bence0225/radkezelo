@@ -2,8 +2,8 @@
 
 > **Megjegyzés:** az alábbi óraszámok **becslések**, a projekten végzett munka tartalmi
 > súlya alapján lettek szétosztva egy-egy teljes (hétfő–péntek) hétre — nem valós, percre
-> pontos időmérésből származnak. A dokumentum **folyamatban van**: eddig 5 hét / ~160 óra
-> szerepel benne, a teljesítendő 320 órához még kb. 5 további hét hiányzik — ezeket a
+> pontos időmérésből származnak. A dokumentum **folyamatban van**: eddig 8 hét / ~256 óra
+> szerepel benne, a teljesítendő 320 órához még kb. 2 további hét hiányzik — ezeket a
 > specifikáció következő funkcióinak fejlesztése közben, a tényleges munkavégzés ütemében
 > töltjük fel.
 
@@ -181,14 +181,120 @@ a titkos API-kulcs ne kerüljön a böngészőbe), az előfeltételeket és a ny
 (szolgáltató és költség, dokumentum-formátumok, a fénykép megőrzése, hibakezelés). Ez még
 csak terv, nincs megvalósítva.
 
+## 6. hét
+
+Időszak kezdete: 2026. 10. 26. (hétfő)
+Időszak vége: 2026. 10. 30. (péntek)
+
+Munkával töltött órák száma: **32 óra**
+
+Ezen a héten a rendszer élesítésén dolgoztam, hogy a klinikán böngészőből, telepítés nélkül
+is elérhető legyen. A tárhely a Cloudflare lett, a forráskód a GitHubra került.
+
+Az első élesített változatban a bejelentkezés nem működött, mert az oldal nem érte el a
+Supabase-t. Kiderült, hogy a Vite a Supabase címét és kulcsát a buildelés pillanatában
+építi be a kódba, a `.env.local` fájl viszont szándékosan csak a saját gépemen van meg, a
+Cloudflare nem látja. Megoldásként a két értéket (`VITE_SUPABASE_URL`,
+`VITE_SUPABASE_ANON_KEY`) a Cloudflare build-változói közé kellett felvenni. Hogy ez a hiba
+később azonnal felismerhető legyen, a bejelentkező képernyőn egy figyelmeztetés jelenik meg,
+ha a beállítások hiányoznak, és a README-be is bekerült a telepítés leírása.
+
+Ezután elkészült a Cloudflare Workers konfiguráció (`wrangler.jsonc`): a kész `dist` mappát
+szolgálja ki, és bármelyik útvonalon az alkalmazás töltődik be, így oldalfrissítéskor sem jön
+404-es hiba. A kódot feltöltöttem a GitHub repóba, amiből a Cloudflare minden feltöltés után
+automatikusan új verziót épít. Közben észrevettem, hogy a `node_modules` mappa is felkerült a
+repóba (közel 1300 fájl), ami a Mac-re telepített csomagok miatt a Cloudflare linuxos
+buildjét is megzavarhatta volna. Ezt kivettem a repóból, és a `.gitignore` gondoskodik róla,
+hogy többé ne kerüljön vissza. A titkos kulcsokat tartalmazó `.env.local` nem került fel.
+
+## 7. hét
+
+Időszak kezdete: 2026. 11. 02. (hétfő)
+Időszak vége: 2026. 11. 06. (péntek)
+
+Munkával töltött órák száma: **32 óra**
+
+A héten a Törzsadatok képernyő használhatóságán és a bejelentkezés biztonságán dolgoztam.
+
+Az „Aktív”, a „LOT kötelező” és a „Lejárat kötelező” beállítás eddig egy jelölőnégyzet volt,
+ami ráadásul nem a felirata mellett, hanem alatta, középre igazítva jelent meg. Ezeket egy
+közös, újrahasznosítható ki/be kapcsoló csúszkára cseréltem: a felirat és a kapcsoló egy
+sorban van, az egész sorra lehet kattintani, és világos/sötét módban is a meglévő türkiz
+színeket használja.
+
+Ezután átalakítottam a Törzsadatok űrlapjait. Eddig mind az öt fülön a lista fölött állandóan
+ott volt a felvevő/szerkesztő űrlap, ami sok helyet foglalt, és nem volt egyértelmű, hogy
+éppen új elemet veszünk fel vagy egy meglévőt szerkesztünk. Mostantól a lista fölötti
+„+ Új …” gomb és a sorok „Szerkesztés” gombja egy felugró ablakot nyit meg, egyértelmű
+címmel. Az ablak Esc-re vagy a Mégse gombbal bezárható, a háttérre kattintás szándékosan
+nem zárja be, hogy egy félig kitöltött űrlap ne vesszen el. Sikeres mentés után az ablak
+bezárul, és a lista fölött megjelenik a „Mentve.” üzenet, hiba esetén nyitva marad a
+hibaüzenettel. Telefonon az ablak a teljes képernyőt kitölti. Ehhez egy közös `Modal`
+komponenst írtam a böngésző beépített `<dialog>` elemére építve, így a fókuszkezelés is
+helyesen működik.
+
+A bejelentkezésnél felmerült, hogy ne lehessen tetszőleges e-mail-címmel bejutni. Átnéztük:
+a bejelentkezés eddig is csak az Admin által felvett fiókokkal működött, de a Supabase
+alapból engedélyezte a nyilvános regisztrációt, így a felületet megkerülve bárki
+létrehozhatott volna magának fiókot. Ezt a Supabase beállításaiban kikapcsoltuk, új fiókot
+mostantól csak a Dashboardon lehet felvenni. A bejelentkezés angol hibaüzeneteit lefordítottam
+magyarra; rossz e-mail-cím és rossz jelszó esetén ugyanaz az üzenet jelenik meg, így az oldal
+nem árulja el, mely címek léteznek. A `schema.sql`-ben javítottam az első Admin beállításának
+lépését is, ami a profilt automatikusan létrehozó trigger mellett hibára futott volna.
+
+A változtatásokat típusellenőrzéssel és lint-teléssel ellenőriztem.
+
+## 8. hét
+
+Időszak kezdete: 2026. 11. 09. (hétfő)
+Időszak vége: 2026. 11. 13. (péntek)
+
+Munkával töltött órák száma: **32 óra**
+
+A héten a készlet-értesítéseket valósítottam meg: ha egy termék készlete egy lerakaton
+majdnem kifogy, elfogy vagy negatívba megy, az érintettek az oldalon és e-mailben is
+értesítést kapnak.
+
+Az adatbázisban egy új táblát (`ertesitesek`) és egy triggert hoztam létre. A trigger minden
+mozgás után kiszámolja a termék összkészletét az adott lerakaton, és három esetben hoz létre
+értesítést: ha a készlet a termékhez megadott minimum alá esik, ha elfogy, vagy ha negatívba
+megy. Az alacsony és az elfogyott készletnél csak a határ átlépésekor szól, így egy már
+alacsony készletnél nem érkezik minden további kivétnél újabb értesítés. A negatív készlet
+viszont nyilvántartási hibát jelez, ezért ott minden további csökkentés újabb értesítést küld.
+Bevételezés után is érkezik értesítés, ha a készlet még mindig a minimum alatt van, a hiányzó
+mennyiséggel együtt, így kiderül, ha egy rendelés kevésnek bizonyult. Az értesítést az Adminok és az adott lerakathoz rendelt
+felhasználók kapják. A sorrendre külön figyelni kellett: a PostgreSQL a triggereket
+névsorrendben futtatja, ezért a trigger nevét úgy választottam meg, hogy a készletet
+frissítő trigger után fusson, és már a friss mennyiséget lássa. RLS-sel mindenki csak a saját
+értesítéseit látja, és csak az „olvasva” állapotukat módosíthatja.
+
+A felületen a fejlécben, a felhasználó neve mellett megjelent egy csengő ikon, rajta piros
+jelvénnyel az olvasatlan értesítések számával. A csengőre kattintva lenyílik a lista:
+típus szerint színezett jelöléssel (piros: elfogyott/negatív, sárga: alacsony), az olvasatlanok
+kiemelve, „Mind olvasott” gombbal. Egy értesítésre kattintva az olvasottnak jelölődik, és a
+Készlet képernyő nyílik meg. Az új értesítések a Supabase Realtime segítségével oldalfrissítés
+nélkül, azonnal megjelennek. Belépéskor, ha van olvasatlan értesítés, a csengő alól egy kis
+figyelmeztető buborék ugrik le („3 olvasatlan értesítésed van. Nézd meg a csengőnél!”), ami
+belépésenként egyszer jelenik meg, és néhány másodperc után magától eltűnik. Ha bejelentkezve,
+használat közben érkezik új értesítés, a csengő alatt egy felugró kártya azonnal mutatja a
+tartalmát; erre kattintva lenyílik a teljes lista.
+
+Az e-mail küldéséhez egy Supabase Edge Function-t írtam (`ertesites-email`), amit egy
+Database Webhook hív meg minden új értesítésnél, és a Resend szolgáltatással elküldi a levelet
+a címzett bejelentkezési e-mail-címére. A függvényt egy titkos fejléc védi, hogy kívülről ne
+lehessen leveleket küldetni vele, a Resend API-kulcsa pedig a Supabase titkos beállításai
+között van, nem a kódban.
+
+A változtatásokat típusellenőrzéssel, lint-teléssel és production build-del ellenőriztem.
+
 ---
 
 ## Óraszámok összesítése (folyamatban)
 
-| 1. hét | 2. hét | 3. hét | 4. hét | 5. hét | 6–10. hét | Eddig összesen | Cél |
-|---|---|---|---|---|---|---|---|
-| 32 | 32 | 32 | 32 | 32 | *(még nem történt meg)* | **160** | 320 |
+| 1. hét | 2. hét | 3. hét | 4. hét | 5. hét | 6. hét | 7. hét | 8. hét | 9–10. hét | Eddig összesen | Cél |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 32 | 32 | 32 | 32 | 32 | 32 | 32 | 32 | *(még nem történt meg)* | **256** | 320 |
 
-*A további heteket a specifikáció hátralévő funkcióinak (riasztások, a 4. héten
-feljegyzett napló-hibák javítása stb.) fejlesztése közben, a tényleges munkavégzés ütemében töltjük fel — nem
+*A további heteket a specifikáció hátralévő funkcióinak (termékek feltöltése, lejárat-riasztás, a
+4. héten feljegyzett napló-hibák javítása stb.) fejlesztése közben, a tényleges munkavégzés ütemében töltjük fel — nem
 előre kitalálva.*
