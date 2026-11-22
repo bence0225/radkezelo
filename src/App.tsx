@@ -3,12 +3,13 @@ import { AuthProvider, useAuth } from './auth/AuthProvider'
 import Login from './pages/Login'
 import Bevetelezes from './pages/Bevetelezes'
 import Kivet from './pages/Kivet'
-import Keszlet from './pages/Keszlet'
+import Keszlet, { type StockFocus } from './pages/Keszlet'
 import Naplo from './pages/Naplo'
 import Torzsadatok from './pages/Torzsadatok'
 import Riportok from './pages/Riportok'
 import { Notice } from './components/ui'
 import { NotificationBell } from './components/NotificationBell'
+import { ThemeToggle } from './components/ThemeToggle'
 import { IconStock, IconIn, IconOut, IconLog, IconReport, IconMaster, IconLogout, IconHospital, type IconProps } from './components/icons'
 
 // Hat képernyő (spec 5. fejezet). Külön router nem kell hozzá.
@@ -26,6 +27,8 @@ const SCREENS: { key: string; label: string; short: string; Page: ComponentType;
 function Shell() {
   const { session, profile, loading, isAdmin, signOut } = useAuth()
   const [screen, setScreen] = useState('keszlet')
+  // Értesítésre kattintva a Készlet ezt a terméket mutatja (a key minden kattintásnál új)
+  const [focus, setFocus] = useState<StockFocus | null>(null)
 
   if (loading) return <p className="msg muted">Betöltés…</p>
   if (!session) return <Login />
@@ -63,7 +66,7 @@ function Shell() {
             <button
               key={s.key}
               className={`nav__item${s.key === active.key ? ' is-active' : ''}`}
-              onClick={() => setScreen(s.key)}
+              onClick={() => { setScreen(s.key); setFocus(null) }}
               aria-current={s.key === active.key ? 'page' : undefined}
             >
               <s.Icon className="nav__icon" aria-hidden="true" />
@@ -78,17 +81,18 @@ function Shell() {
             <span className="account__name">{profile.nev}</span>
             <span className="account__role">{profile.szerepkor === 'ADMIN' ? 'Admin' : 'Felhasználó'}</span>
           </span>
+          <ThemeToggle />
           <NotificationBell
             userId={profile.id}
             loginKey={session.user.last_sign_in_at ?? ''}
-            onOpenItem={() => setScreen('keszlet')}
+            onOpenItem={(n) => { setScreen('keszlet'); setFocus({ productId: n.product_id, locationId: n.location_id, key: Date.now() }) }}
           />
           <button className="account__logout" onClick={signOut} title="Kilépés" aria-label="Kilépés">
             <IconLogout />
           </button>
         </div>
       </header>
-      <main className={`page${active.wide ? ' page--wide' : ''}`}><Page /></main>
+      <main className={`page${active.wide ? ' page--wide' : ''}`}>{active.key === 'keszlet' ? <Keszlet focus={focus} /> : <Page />}</main>
     </>
   )
 }

@@ -2,8 +2,8 @@
 
 > **Megjegyzés:** az alábbi óraszámok **becslések**, a projekten végzett munka tartalmi
 > súlya alapján lettek szétosztva egy-egy teljes (hétfő–péntek) hétre — nem valós, percre
-> pontos időmérésből származnak. A dokumentum **folyamatban van**: eddig 8 hét / ~256 óra
-> szerepel benne, a teljesítendő 320 órához még kb. 2 további hét hiányzik — ezeket a
+> pontos időmérésből származnak. A dokumentum **folyamatban van**: eddig 9 hét / ~288 óra
+> szerepel benne, a teljesítendő 320 órához még kb. 1 további hét hiányzik — ezt a
 > specifikáció következő funkcióinak fejlesztése közben, a tényleges munkavégzés ütemében
 > töltjük fel.
 
@@ -289,12 +289,86 @@ A változtatásokat típusellenőrzéssel, lint-teléssel és production build-d
 
 ---
 
+## 9. hét
+
+Időszak kezdete: 2026. 11. 16. (hétfő)
+Időszak vége: 2026. 11. 20. (péntek)
+
+Munkával töltött órák száma: **32 óra**
+
+A hetet a Készlet képernyő mobilos megjelenítésével kezdtem: telefonon az ötoszlopos táblázat
+kilógott a képernyőről, és csak oldalra görgetve látszott a lejárat és a mennyiség. Keskeny
+kijelzőn ezért minden készletsor kártyaként jelenik meg (felül a terméknév, alatta
+címke–érték párokban a lerakat, a LOT, a lejárat és a mennyiség), asztali nézetben a táblázat
+változatlan maradt. A korábbi hetek munkáját (értesítések, Törzsadatok modálok,
+login-szigorítás) ezzel együtt feltöltöttem a GitHub-repóba, ahonnan a Cloudflare építi az
+éles változatot; feltöltés előtt ellenőriztem, hogy titkos kulcs ne kerüljön a repóba.
+
+Ezután felvittem a klinikától kapott első terméklistát. A listát képként kaptuk meg, ebből
+olvastam ki az 59 termék cikkszámát és megnevezését (egy tétel kétszer szerepelt), és egy
+többször is lefuttatható SQL-szkriptet írtam belőle, ami a meglévő cikkszámokat kihagyja. A
+lejárati idővel rendelkező termékekhez (fecskendők, tűk, kanülök, kesztyűk, vércsövek,
+tesztcsík, gélek stb., összesen 41 tétel) új kategóriát vettem fel („Lejáratos fogyóeszköz”:
+lejárat kötelező, LOT nem), a többi a „Fogyóeszköz” kategóriába került; a besorolás a
+Törzsadatoknál termékenként módosítható. Az első változat a Supabase SQL Editorában
+ideiglenes tábla miatt hibát adott, ezért egyetlen utasításra írtam át. A hosszú terméknevek
+miatt a Törzsadatok és a Készlet táblázatában a név oszlopot tördelhetővé tettem.
+
+A Törzsadatokban a termék törlése nem működött, ha a termékhez már tartozott készlet vagy
+napló-mozgás, mert a napló sorait egy trigger védi. Írtam egy Admin-ellenőrzéses
+adatbázis-függvényt (`admin_delete_product`), ami a terméket a készletsoraival, a
+mozgásaival és az értesítéseivel együtt törli; a napló védelme minden más esetben
+változatlan maradt. Az alkalmazás törlés előtt kiírja, hány napló-bejegyzés vész el vele.
+
+A Készlet képernyőn a negatív készletű sor addig csak akkor lett piros, ha a terméknek volt
+minimum mennyisége; ezt javítottam, a negatív készlet most minimumtól függetlenül mindig
+kiemelt. Az értesítésekre kattintva az alkalmazás most a Készlet képernyőn az adott termékre
+ugrik: a lerakat-szűrő az értesítés lerakatára áll, a lista odagörget, és a termék sorai
+felvillanó kerettel kiemelődnek.
+
+Átdolgoztam a leltárív nyomtatási nézetét: a nyomat a képernyő témájától függetlenül mindig
+fehér alapú és fekete keretes, a fejlécben a lerakat neve, a dátum és a leltározás napjának
+helye szerepel (minden oldalon megismételve), a hosszú nevek tördelődnek, a „Számlált” mellé
+„Eltérés” oszlop került, alul pedig aláírás-helyek vannak a leltározónak és az ellenőrzőnek.
+A böngésző saját fejléce (lapcím, webcím) nem kerül a nyomatra, PDF-mentésnél pedig a fájl
+neve a lerakatot és a dátumot tartalmazza.
+
+A fejlécbe a csengő mellé világos/sötét mód kapcsoló került: amíg a felhasználó nem választ,
+a rendszerbeállítást követi, a választást a böngésző megjegyzi. Elkészítettem az elfelejtett
+jelszó funkciót is (visszaállító levél küldése, új jelszó megadása), de mivel a levélküldéshez
+még nincs beállított levelezőszolgáltatás (Resend vagy SMTP), egyelőre kivettük az
+alkalmazásból.
+
+A változtatásokat típusellenőrzéssel, lint-teléssel és production build-del ellenőriztem, a
+felületi változásokat helyi fejlesztői szerveren néztük át.
+
+---
+
+## 10. hét *(tervezett — a tényleges munka után töltjük ki)*
+
+Időszak kezdete: 2026. 11. 23. (hétfő)
+Időszak vége: 2026. 11. 27. (péntek)
+
+Munkával töltött órák száma: *(a hét végén kerül be)*
+
+Tervezett feladatok:
+
+- a rendszer átfogó tesztelése: bevételezés, kivét, készletlista, napló és javítás,
+  riportok és leltárív, Törzsadatok (felvétel, szerkesztés, törlés), értesítések,
+  jogosultságok Admin és Felhasználó szerepkörrel, mobilos nézet;
+- a tesztelés során talált hibák javítása;
+- elfelejtett jelszó funkció visszaépítése, ha addigra a levélküldés (Resend vagy SMTP)
+  beállításra kerül;
+- egyéb, menet közben felmerülő kisebb fejlesztések.
+
+---
+
 ## Óraszámok összesítése (folyamatban)
 
-| 1. hét | 2. hét | 3. hét | 4. hét | 5. hét | 6. hét | 7. hét | 8. hét | 9–10. hét | Eddig összesen | Cél |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 32 | 32 | 32 | 32 | 32 | 32 | 32 | 32 | *(még nem történt meg)* | **256** | 320 |
+| 1. hét | 2. hét | 3. hét | 4. hét | 5. hét | 6. hét | 7. hét | 8. hét | 9. hét | 10. hét | Eddig összesen | Cél |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 32 | 32 | 32 | 32 | 32 | 32 | 32 | 32 | 32 | *(tervezett: tesztelés)* | **288** | 320 |
 
-*A további heteket a specifikáció hátralévő funkcióinak (termékek feltöltése, lejárat-riasztás, a
+*A hátralévő hetet a specifikáció hátralévő funkcióinak (lejárat-riasztás, a
 4. héten feljegyzett napló-hibák javítása stb.) fejlesztése közben, a tényleges munkavégzés ütemében töltjük fel — nem
 előre kitalálva.*

@@ -176,9 +176,13 @@ create trigger movement_updates_stock after insert on public.stock_movements
   for each row execute function public.apply_movement_to_stock();
 
 -- A napló csak bővíthető: update/delete senkinek (a service role-nak sem) — csak új, javító sor
+-- Kivétel: az admin_delete_product függvény a saját tranzakciójában engedélyezi a törlést
 create function public.block_movement_changes() returns trigger
 language plpgsql as $$
 begin
+  if tg_op = 'DELETE' and current_setting('app.termek_torles', true) = 'on' then
+    return old;
+  end if;
   raise exception 'A stock_movements tábla sorai nem módosíthatók — használd a Javítás mozgást';
 end $$;
 
@@ -254,6 +258,30 @@ end $$;
 
 revoke execute on function public.admin_delete_user(uuid) from public, anon;
 grant execute on function public.admin_delete_user(uuid) to authenticated;
+
+-- Termék végleges törlése (Törzsadatok → Termékek): készletsorokkal és napló-mozgásokkal együtt
+create function public.admin_delete_product(pid bigint) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Terméket csak Admin törölhet';
+  end if;
+  if not exists (select 1 from public.products where id = pid) then
+    raise exception 'A termék nem létezik (talán már törölték)';
+  end if;
+
+  -- csak erre a tranzakcióra engedi a napló-sorok törlését
+  perform set_config('app.termek_torles', 'on', true);
+
+  delete from public.stock_movements where product_id = pid;
+  delete from public.stock where product_id = pid;
+  delete from public.products where id = pid;  -- az értesítések kaszkádolva törlődnek
+
+  perform set_config('app.termek_torles', 'off', true);
+end $$;
+
+revoke execute on function public.admin_delete_product(bigint) from public, anon;
+grant execute on function public.admin_delete_product(bigint) to authenticated;
 
 -- Jogosultságok (bejelentkezés nélkül semmi; a többit az RLS szűri)
 revoke all on all tables in schema public from anon;

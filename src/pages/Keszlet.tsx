@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
 import { T } from '../lib/tables'
@@ -6,9 +6,21 @@ import { useQuery } from '../lib/useQuery'
 import type { StockRow } from '../lib/types'
 import { Field, Loading } from '../components/ui'
 
-export default function Keszlet() {
+/** Értesítésből érkezve: erre a termékre/lerakatra ugrik a lista. A key kattintásonként új. */
+export interface StockFocus { productId: number; locationId: number; key: number }
+
+export default function Keszlet({ focus = null }: { focus?: StockFocus | null }) {
   const { locations } = useAuth()
-  const [locationId, setLocationId] = useState('')
+  const [locationId, setLocationId] = useState(focus ? String(focus.locationId) : '')
+  const tableRef = useRef<HTMLDivElement>(null)
+  const scrolledFor = useRef<number | null>(null)
+
+  // Új értesítésre kattintva a lerakat-szűrő az értesítés lerakatára áll
+  const [seenFocusKey, setSeenFocusKey] = useState(focus?.key ?? null)
+  if (focus && focus.key !== seenFocusKey) {
+    setSeenFocusKey(focus.key)
+    setLocationId(String(focus.locationId))
+  }
 
   const stock = useQuery(() => {
     let q = supabase.from(T.stock).select('*, products(nev, mertekegyseg, min_mennyiseg, cikkszam), locations(nev)')
@@ -24,9 +36,23 @@ export default function Keszlet() {
     totals.set(k, (totals.get(k) ?? 0) + r.mennyiseg)
   }
   const isLow = (r: StockRow) => {
+    const total = totals.get(`${r.product_id}:${r.location_id}`) ?? 0
     const min = r.products?.min_mennyiseg
-    return min != null && (totals.get(`${r.product_id}:${r.location_id}`) ?? 0) < min
+    // negatív készlet mindig hiba, minimumtól függetlenül
+    return total < 0 || (min != null && total < min)
   }
+
+  const isFocus = (r: StockRow) => focus != null && r.product_id === focus.productId && r.location_id === focus.locationId
+  const focusRow = focus ? rows.find(isFocus) : undefined
+
+  // Betöltés után egyszer odagörget a kiemelt termékhez
+  useEffect(() => {
+    if (!focus || stock.loading || scrolledFor.current === focus.key) return
+    const el = tableRef.current?.querySelector('tr.is-focus')
+    if (!el) return
+    scrolledFor.current = focus.key
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [focus, stock.loading, stock.data])
 
   return (
     <section>
@@ -40,14 +66,17 @@ export default function Keszlet() {
         </select>
       </Field>
       <Loading loading={stock.loading} error={stock.error} />
-      <div className="table-wrap table-wrap--stack">
+      {focus && !stock.loading && !focusRow && (
+        <p className="msg muted">Az értesítésben szereplő termékhez ezen a lerakaton nincs készletsor.</p>
+      )}
+      <div className="table-wrap table-wrap--stack" ref={tableRef}>
         <table className="table-stack">
           <thead>
             <tr><th>Termék</th><th>Lerakat</th><th>LOT</th><th>Lejárat</th><th className="num">Mennyiség</th></tr>
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={`${r.product_id}-${r.location_id}-${r.lot}-${r.lejarat}`} className={isLow(r) ? 'low' : undefined}>
+              <tr key={`${r.product_id}-${r.location_id}-${r.lot}-${r.lejarat}`} className={[isLow(r) && 'low', isFocus(r) && 'is-focus'].filter(Boolean).join(' ') || undefined}>
                 <td className="stack-title wrap" data-label="Termék">{r.products?.nev}</td>
                 <td data-label="Lerakat">{r.locations?.nev}</td>
                 <td data-label="LOT">{r.lot ?? '—'}</td>

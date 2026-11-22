@@ -49,6 +49,15 @@ export default function Riportok() {
 
   // --- Leltár ív ---
   const [sheetLoc, setSheetLoc] = useState('')
+  const sheetLocName = locations.find((l) => String(l.id) === sheetLoc)?.nev ?? ''
+  const [printDate] = useState(() => new Date().toLocaleDateString('hu-HU'))
+  // Nyomtatás idejére a lapcím a leltárívé (PDF-mentésnél ez lesz a fájlnév)
+  function printSheet() {
+    const old = document.title
+    document.title = `Leltárív – ${sheetLocName} – ${printDate}`
+    window.print()
+    document.title = old
+  }
   const sheet = useQuery(
     () =>
       sheetLoc
@@ -133,22 +142,51 @@ export default function Riportok() {
             {locations.map((l) => <option key={l.id} value={l.id}>{l.nev}</option>)}
           </select>
         </Field>
-        <button disabled={!sheet.data?.length} onClick={() => window.print()}>Nyomtatás</button>
+        <button disabled={!sheet.data?.length} onClick={printSheet}>Nyomtatás</button>
       </div>
       <Loading loading={sheet.loading} error={sheet.error} />
       {!!sheet.data?.length && (
-        <div className="table-wrap print-area">
-          <table>
-            <thead><tr><th>Termék</th><th>Cikkszám</th><th>LOT</th><th>Lejárat</th><th className="num">Könyv szerint</th><th className="count">Számlált</th></tr></thead>
-            <tbody>
-              {sheet.data.map((r) => (
-                <tr key={`${r.product_id}-${r.lot}-${r.lejarat}`}>
-                  <td>{r.products?.nev}</td><td>{r.products?.cikkszam ?? ''}</td><td>{r.lot ?? '—'}</td><td>{r.lejarat ?? '—'}</td>
-                  <td className="num">{r.mennyiseg} {r.products?.mertekegyseg}</td><td className="count"></td>
+        <div className="print-area leltariv">
+          <div className="table-wrap">
+            <table>
+              <thead>
+                {/* Csak nyomtatásban: az ív fejléce, minden oldal tetején megismétlődik.
+                    A felső térköz itt van, mert a böngésző saját fejléce miatt a lapmargó 0. */}
+                <tr className="print-only leltariv__headrow">
+                  <th colSpan={8}>
+                    <div className="leltariv__head">
+                      <h1>Leltárív</h1>
+                      <dl>
+                        <div><dt>Lerakat</dt><dd>{sheetLocName}</dd></div>
+                        <div><dt>Készült</dt><dd>{printDate}</dd></div>
+                        <div><dt>Leltározás napja</dt><dd className="leltariv__blank" /></div>
+                      </dl>
+                    </div>
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+                <tr>
+                  <th className="num leltariv__nr">#</th><th>Termék</th><th>Cikkszám</th><th>LOT</th><th>Lejárat</th>
+                  <th className="num">Könyv szerint</th><th className="count">Számlált</th><th className="count print-only">Eltérés</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sheet.data.map((r, i) => (
+                  <tr key={`${r.product_id}-${r.lot}-${r.lejarat}`}>
+                    <td className="num leltariv__nr">{i + 1}</td>
+                    <td className="wrap">{r.products?.nev}</td><td>{r.products?.cikkszam ?? ''}</td><td>{r.lot ?? '—'}</td><td>{r.lejarat ?? '—'}</td>
+                    <td className="num">{r.mennyiseg} {r.products?.mertekegyseg}</td><td className="count"></td><td className="count print-only"></td>
+                  </tr>
+                ))}
+              </tbody>
+              {/* Csak nyomtatásban: alsó térköz minden oldal alján */}
+              <tfoot className="print-only"><tr className="leltariv__spacer"><td colSpan={8} /></tr></tfoot>
+            </table>
+          </div>
+          {/* Csak nyomtatásban: aláírások */}
+          <footer className="leltariv__sign print-only">
+            <div><span className="leltariv__line" />Leltározó neve, aláírása</div>
+            <div><span className="leltariv__line" />Ellenőrző neve, aláírása</div>
+          </footer>
         </div>
       )}
     </section>

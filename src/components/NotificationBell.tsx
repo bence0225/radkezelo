@@ -22,7 +22,7 @@ function rememberHint(key: string) {
   try { localStorage.setItem(key, '1') } catch { /* privát mód: legfeljebb újra megjelenik */ }
 }
 
-export function NotificationBell({ userId, loginKey, onOpenItem }: { userId: string; loginKey: string; onOpenItem: () => void }) {
+export function NotificationBell({ userId, loginKey, onOpenItem }: { userId: string; loginKey: string; onOpenItem: (n: Ertesites) => void }) {
   const [toast, setToast] = useState<Ertesites | null>(null)
   const { items, unread, loaded, markRead, markAllRead } = useNotifications(userId, (n) => { setHint(false); setToast(n) })
   const [open, setOpen] = useState(false)
@@ -62,7 +62,7 @@ export function NotificationBell({ userId, loginKey, onOpenItem }: { userId: str
   function openItem(n: Ertesites) {
     markRead(n.id)
     setOpen(false)
-    onOpenItem()
+    onOpenItem(n)
   }
 
   const label = unread ? `Értesítések, ${unread} olvasatlan` : 'Értesítések'

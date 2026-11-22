@@ -27,8 +27,10 @@
   color-scheme: light dark;
   font: 15px/1.55 -apple-system, 'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
+/* Sötét téma: a rendszer szerint, kivéve ha a felhasználó világosat választott;
+   vagy kézzel választva (a fejléc nap/hold gombja a <html data-theme>-et állítja) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0f1717; --surface: #17201f; --fg: #e7efee; --muted: #93a6a4;
     --line: #2a3736; --line-soft: #223030;
     --accent: #3fa89c; --accent-600: #59c0b3; --accent-fg: #05201d;
@@ -37,6 +39,16 @@
     --ok: #63d391; --warn: #e3b854; --err: #ff8a80; --low: #3a1c1a;
   }
 }
+:root[data-theme="dark"] {
+    --bg: #0f1717; --surface: #17201f; --fg: #e7efee; --muted: #93a6a4;
+    --line: #2a3736; --line-soft: #223030;
+    --accent: #3fa89c; --accent-600: #59c0b3; --accent-fg: #05201d;
+    --accent-tint: #163330; --accent-tint-strong: #1c403c;
+    --danger: #ff8a80; --danger-tint: #3a1c1a;
+    --ok: #63d391; --warn: #e3b854; --err: #ff8a80; --low: #3a1c1a;
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg); font-variant-numeric: tabular-nums; }
 h1, h2, h3 { margin: 0 0 .75rem; letter-spacing: -.01em; } h3 { margin-top: 2rem; }
@@ -109,16 +121,17 @@ h1, h2, h3 { margin: 0 0 .75rem; letter-spacing: -.01em; } h3 { margin-top: 2rem
 
 /* ---------- Értesítések (csengő) ---------- */
 .bell { position: relative; }
-.bell__button {
+.bell__button, .theme-toggle {
   position: relative; display: grid; place-items: center;
   width: 34px; height: 34px; padding: 0; border-radius: 999px;
   border: 1px solid var(--line); background: transparent; color: var(--muted);
 }
-.bell__button svg { width: 18px; height: 18px; }
+.bell__button svg, .theme-toggle svg { width: 18px; height: 18px; }
 @media (any-hover: hover) {
-  .bell__button:hover { background: var(--accent-tint); color: var(--accent-600); border-color: transparent; box-shadow: none; }
+  .bell__button:hover, .theme-toggle:hover { background: var(--accent-tint); color: var(--accent-600); border-color: transparent; box-shadow: none; }
 }
-.bell__button:active { transform: scale(.94); }
+.bell__button:active, .theme-toggle:active { transform: scale(.94); }
+.theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .bell__badge {
   position: absolute; top: -5px; right: -6px;
   min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
@@ -296,6 +309,10 @@ tbody tr:last-child td { border-bottom: none; }
 /* Hosszú szövegű cella (pl. terméknév): tördelődik, hogy a táblázat ne lógjon ki */
 td.wrap { white-space: normal; min-width: 14rem; max-width: 28rem; }
 tr.low td { background: var(--low); color: var(--err); font-weight: 600; }
+/* Értesítésből kiemelt sor: keret + rövid felvillanás */
+tr.is-focus { outline: 2px solid var(--accent); outline-offset: -2px; animation: focus-flash 1.6s var(--ease) 2; }
+@keyframes focus-flash { 50% { outline-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { tr.is-focus { animation: none; } }
 .count { width: 8rem; border-left: 1px solid var(--line); }
 
 .msg { margin: .5rem 0; } .muted { color: var(--muted); } .ok { color: var(--ok); } .warn { color: var(--warn); } .error { color: var(--err); }
@@ -398,8 +415,47 @@ tr.low td { background: var(--low); color: var(--err); font-weight: 600; }
   .table-stack td[colspan]::before { content: none; }
 }
 
+/* Leltárív: a nyomtatási elemek képernyőn rejtve */
+.print-only { display: none; }
+
 @media print {
+  /* 0 margó: így a böngésző nem nyomtatja rá a saját fejlécét (lapcím, dátum, webcím) */
+  @page { size: A4; margin: 0; }
   .no-print, .topbar { display: none !important; }
-  body { background: #fff; color: #000; }
-  .page > section > *:not(.print-area):not(h2) { display: none; }
+  /* Mindig világos, fekete-fehér nyomat, akkor is, ha a képernyő sötét módban van */
+  :root { color-scheme: light; }
+  html, body { background: #fff !important; color: #000 !important; }
+  .page { padding: 0 !important; max-width: none; }
+  .page > section > *:not(.print-area) { display: none !important; }
+  .print-only { display: revert; }
+
+  .leltariv { font: 10pt/1.35 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #000; padding: 0 12mm; }
+  .leltariv__head { display: block; padding: 12mm 0 5mm; text-align: left; font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 10pt; }
+  .leltariv .leltariv__headrow th { border: none; background: #fff !important; padding: 0; }
+  .leltariv .leltariv__spacer td { border: none; height: 12mm; padding: 0; }
+  tr.print-only { display: table-row; }
+  tfoot.print-only { display: table-footer-group; }
+  .leltariv__head h1 { margin: 0 0 3mm; font-size: 16pt; }
+  .leltariv__head dl { display: flex; gap: 10mm; margin: 0; }
+  .leltariv__head dt { font-size: 8pt; text-transform: uppercase; letter-spacing: .04em; color: #444; }
+  .leltariv__head dd { margin: 1mm 0 0; font-weight: 600; min-height: 1.3em; }
+  .leltariv__blank { min-width: 40mm; border-bottom: 1px solid #000; }
+
+  .leltariv .table-wrap { overflow: visible; border: none; border-radius: 0; }
+  .leltariv table { width: 100%; background: #fff; border-collapse: collapse; }
+  .leltariv thead { display: table-header-group; }   /* fejléc minden oldalon */
+  .leltariv tr { break-inside: avoid; }
+  .leltariv th, .leltariv td {
+    border: 1px solid #000; padding: 1.6mm 2mm; color: #000 !important; background: #fff !important;
+    vertical-align: middle;
+  }
+  .leltariv th { font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; background: #eee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .leltariv td.wrap { white-space: normal; min-width: 0; max-width: none; }
+  .leltariv td { height: 8mm; }
+  .leltariv .leltariv__nr { width: 7mm; color: #444 !important; }
+  .leltariv .count { width: 22mm; border-left: 1px solid #000; }
+
+  .leltariv__sign { display: flex; gap: 20mm; margin-top: 14mm; break-inside: avoid; font-size: 9pt; }
+  .leltariv__sign div { flex: 1; }
+  .leltariv__line { display: block; border-bottom: 1px solid #000; height: 10mm; margin-bottom: 1.5mm; }
 }

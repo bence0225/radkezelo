@@ -381,9 +381,15 @@ function ProductsAdmin() {
   }
 
   async function remove(p: Product) {
-    if (!window.confirm(`Biztosan törlöd a(z) „${p.nev}” terméket?`)) return
+    // Ha van előzménye, azt is törli — ezt a megerősítésben külön jelezzük
+    const { count } = await supabase.from(T.movements).select('id', { count: 'exact', head: true }).eq('product_id', p.id)
+    const warning = count
+      ? `\n\nFIGYELEM: a termékhez ${count} napló-bejegyzés és a készletsorai is tartoznak — ezek is véglegesen törlődnek, és a riportokból is eltűnnek.`
+      : ''
+    if (!window.confirm(`Biztosan véglegesen törlöd a(z) „${p.nev}” terméket?${warning}`)) return
     setBusy(true)
-    const result = await deleteRow(T.products, p.id, 'a termékhez már tartozik készlet vagy mozgás')
+    const { error } = await supabase.rpc('admin_delete_product', { pid: p.id })
+    const result = deleteStatus(error, 'a termékhez tartozó adatok miatt')
     if (result.kind === 'ok') list.reload()
     setStatus(result)
     setBusy(false)
